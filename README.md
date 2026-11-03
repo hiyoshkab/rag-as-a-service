@@ -5,9 +5,11 @@ RaaS (RAG as a Service) is a retrieval-augmented question-answering application 
 ## Architecture
 ![RaaS architecture](./architecture.png)
 
-
 The backend chunks uploaded text, creates 384-dimensional embeddings with `BAAI/bge-small-en-v1.5`, and stores them in the `documents` Qdrant collection. Queries retrieve the most relevant chunks and pass them to the configured Azure
 OpenAI deployment to generate an answer.
+
+## Demo
+![Demo](./demo.png)
 
 ## Repository layout
 | Path | Description |
@@ -21,15 +23,18 @@ OpenAI deployment to generate an answer.
 | [`.github/workflows/`](./.github/workflows) | Test, image build, Terraform, and deployment workflows |
 
 ## Prerequisites
-- Python 3.14
-- Node.js 20 or newer and npm
-- Docker, if running Qdrant locally
+
+- Azure CLI, authenticated to the subscription containing the AKS cluster
+- `kubectl`
+- `kubelogin` for Microsoft Entra authentication to AKS
+- An AKS cluster and RaaS deployment created using the [Terraform and Helm
+  deployment instructions](#azure-and-kubernetes-deployment)
 
 ## Azure and Kubernetes deployment
 Deployment is done through Github Actions.
 Infrastructure is managed with Terraform and application resources with Helm. Read the detailed guides before deploying:
 
-- [Terraform setup](./terraform/README.md), including importing the existing Foundry account and model deployment
+- [Terraform setup](./terraform/README.md), including remote state and Foundry provisioning
 - [Helm deployment](./helm/raas/README.md), including required GitHub variables and secrets
 
 The deployment uses an AKS cluster, a Qdrant StatefulSet with persistent storage, and Azure Workload Identity for the backend's user-assigned identity. The application namespace is `raas`.
@@ -38,43 +43,92 @@ On pushes to `main`, the deployment workflow runs backend and frontend tests, bu
 
 > Note: For production, Azure Container Registry with Private Endpoint should be used instead of Docker Hub. Docker Hub is used here for simpler design in this demo. 
 
-## Local development
-### 1. Start Qdrant
+## Run the deployed application
 
+The Helm chart deploys the frontend and backend as internal Kubernetes
+`ClusterIP` services. Connect to AKS with your Microsoft Entra identity, then
+forward the frontend service to your local machine.
+
+### 1. Connect `kubectl` to AKS
 ```sh
-docker run --rm -p 6333:6333 qdrant/qdrant:v1.13.2
-```
+CLUSTER_NAME="<AKS cluster name>"
+RESOURCE_GROUP="<AKS resource group>"
 
-### 2. Start the backend
-From the repository root:
-
-```sh
 az login
-python3.14 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-
-export AZURE_OPENAI_ENDPOINT="https://<your-foundry-endpoint>/openai/v1/"
-export AZURE_OPENAI_DEPLOYMENT="gpt-5.4-mini"
-
-cd backend
-uvicorn app_backend.main:app --reload
+az aks get-credentials \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$CLUSTER_NAME" \
+  --overwrite-existing
+kubelogin convert-kubeconfig -l azurecli
 ```
 
-The API listens on `http://127.0.0.1:8000`. Azure authentication uses the
-standard Azure identity chain; `az login` is sufficient for local development.
+If you are using a different shell or machine, replace the variables with the
+values from `terraform output`. The cluster disables local administrator
+accounts, so use the Entra-enabled kubeconfig rather than `--admin`.
 
-### 3. Start the frontend
-In a second terminal:
+### 2. Check the deployment
 
 ```sh
-cd frontend/app_frontend
-npm ci
-npm run dev
+kubectl get pods,svc -n raas
+kubectl get events -n raas --sort-by=.lastTimestamp
 ```
 
-Open the URL printed by Vite. Its development proxy forwards `/ingest` and
-`/query` to the backend.
+Wait until the frontend and backend pods report `Running` and `READY 1/1`.
+Check application health and backend logs when troubleshooting:
+
+```sh
+kubectl logs -n raas deploy/app-backend
+kubectl logs -n raas deploy/app-frontend
+kubectl run curl --rm -it --restart=Never -n raas \
+  --image=curlimages/curl -- \
+  curl -fsS http://app-backend-service:8000/healthz
+```
+
+### 3. Open the application
+
+Forward the internal frontend service to port 8080:
+
+```sh
+kubectl port-forward -n raas svc/app-frontend-service 8080:80
+```
+
+Open <http://127.0.0.1:8080> in a browser. The frontend proxies `/ingest` and
+`/query` to the backend service inside the cluster, so no separate backend
+port-forward is needed.
+
+You can also call the application API through the forwarded frontend:
+
+```sh
+curl -fsS http://127.0.0.1:8080/healthz
+curl -F "file=@sample.txt" http://127.0.0.1:8080/ingest
+curl -X POST http://127.0.0.1:8080/query \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"What does the document say?","top_k":3}'
+```
+
+Keep the `kubectl port-forward` command running while using the application.
+Press `Ctrl+C` to stop forwarding.
+
+> Note: `kubectl port-forward` is intended only for local development and troubleshooting. In production, expose the frontend through an HTTPS ingress, such as Azure Application Gateway for Containers or an ingress controller, and map it to a DNS hostname.
+
+### 4. Open the Qdrant dashboard
+
+Qdrant is deployed as an internal `ClusterIP` service. In another terminal,
+forward its HTTP port:
+
+```sh
+kubectl port-forward -n raas svc/qdrant 6333:6333
+```
+
+Open <http://127.0.0.1:6333/dashboard> to inspect collections and points. You
+can also check the API:
+
+```sh
+curl http://127.0.0.1:6333/collections
+```
+
+Keep the port-forward running while using the dashboard. Qdrant is not
+publicly exposed by the Helm chart.
 
 ## Configuration
 The backend reads these environment variables:
@@ -94,16 +148,11 @@ The backend reads these environment variables:
 | `OVERLAP` | `64` | Chunk overlap |
 
 ## API
-### `GET /healthz`
-Returns `{"status":"ok"}` when the process is running.
-
-### `GET /readyz`
-Checks that Qdrant is reachable. Returns HTTP 503 when it is unavailable.
 ### `POST /ingest`
 
 Accepts a multipart form upload:
 ```sh
-curl -F "file=@sample.txt" http://127.0.0.1:8000/ingest
+curl -F "file=@sample.txt" http://127.0.0.1:8080/ingest
 ```
 
 Only UTF-8 text is accepted. The response includes the normalized filename and
@@ -113,37 +162,10 @@ number of stored chunks.
 Accepts JSON with a question and optional number of results:
 
 ```sh
-curl -X POST http://127.0.0.1:8000/query \
+curl -X POST http://127.0.0.1:8080/query \
   -H 'Content-Type: application/json' \
   -d '{"question":"What does the document say?","top_k":3}'
 ```
 
 The response contains the generated answer and the source filename, chunk
 index, relevance score, and text for each retrieved passage.
-
-## Tests and builds
-
-Run backend tests:
-```sh
-source .venv/bin/activate
-cd backend
-pytest -q
-```
-
-Run frontend tests and create a production build:
-```sh
-cd frontend/app_frontend
-npm ci
-npm test -- --run
-npm run build
-```
-
-## Containers
-Build the images from the repository root:
-
-```sh
-docker build -f backend/Dockerfile -t raas-backend .
-docker build -f frontend/Dockerfile -t raas-frontend .
-```
-
-The backend exposes port `8000`. The frontend image serves the compiled application on port `80`. The production Nginx configuration proxies `/ingest` and `/query` to the Kubernetes backend service.

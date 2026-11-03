@@ -24,31 +24,6 @@ The Foundry resource group is not created by this configuration. Set
 `foundry_resource_group_name` to an existing resource group. The separate
 resource group created by Terraform contains the AKS and application resources.
 
-## Configuration
-
-Create a local variable file from the example when one is available, or create
-`terraform.tfvars` with values for the required variables:
-
-```hcl
-aks_admin_group_object_id       = "00000000-0000-0000-0000-000000000000"
-gha_service_principal_object_id = "00000000-0000-0000-0000-000000000000"
-
-foundry_name                  = "your-foundry-account"
-foundry_resource_group_name   = "your-existing-foundry-resource-group"
-foundry_location              = "westus"
-foundry_custom_subdomain_name = "your-foundry-account"
-
-foundry_deployment_name         = "gpt-5.4-mini"
-foundry_model_name              = "gpt-5.4-mini"
-foundry_model_version           = "2025-04-14"
-foundry_deployment_sku_name     = "GlobalStandard"
-foundry_deployment_capacity    = 1
-```
-
-The Foundry model name, version, SKU, and capacity must be valid for the
-selected Azure region and subscription. Confirm current model availability in
-Azure before applying.
-
 ## Remote Terraform state
 
 The Terraform configuration uses an Azure Blob Storage backend. The backend
