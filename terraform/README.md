@@ -1,44 +1,142 @@
 # Terraform
 
-Terraform grants the GitHub Actions deployment service principal:
+This configuration creates the Azure infrastructure required by RaaS:
 
-- `Azure Kubernetes Service Cluster User Role` at the AKS cluster scope, to retrieve non-admin cluster credentials.
-- `Azure Kubernetes Service RBAC Writer` at the `raas` namespace scope, to deploy the Helm release.
+- An AKS cluster with Azure RBAC, OIDC, and Workload Identity enabled
+- A virtual network and subnets for AKS and Azure AI Foundry
+- An Azure AI Foundry account and model deployment
+- A private endpoint and private DNS integration for Foundry
+- A user-assigned identity for the backend
+- Azure role assignments for the backend and GitHub Actions deployment identity
 
-Set `github_actions_service_principal_object_id` to the service principal's
-Microsoft Entra **object ID** (not its application/client ID) in
-`terraform.tfvars` or via the `TF_VAR_github_actions_service_principal_object_id`
-environment variable before running Terraform.
+## Prerequisites
 
-The `raas` namespace must exist before the Helm workflow deploys the chart.
+- Terraform 1.16.5 or newer
+- Azure CLI
+- An Azure subscription with permission to create resource groups, AKS,
+  networking, Azure AI Foundry, private endpoints, managed identities, and
+  role assignments
+- An existing resource group for the Foundry account and private endpoint
+- A Microsoft Entra group object ID for AKS administrators
+- The Microsoft Entra service principal object ID used by GitHub Actions
 
-## Existing Foundry account and app identity
+The Foundry resource group is not created by this configuration. Set
+`foundry_resource_group_name` to an existing resource group. The separate
+resource group created by Terraform contains the AKS and application resources.
 
-Copy `terraform.tfvars.example` to `terraform.tfvars` and set the account and
-deployment values. The Foundry account and model deployment are declared as
-Terraform resources and must be imported before planning, since they already
-exist:
+## Configuration
 
-```sh
-FOUNDRY_RESOURCE_ID=$(az cognitiveservices account show \
-  --name "$FOUNDRY_NAME" \
-  --resource-group "$FOUNDRY_RESOURCE_GROUP" \
-  --query id -o tsv)
+Create a local variable file from the example when one is available, or create
+`terraform.tfvars` with values for the required variables:
 
-terraform import azurerm_cognitive_account.foundry "$FOUNDRY_RESOURCE_ID"
+```hcl
+aks_admin_group_object_id       = "00000000-0000-0000-0000-000000000000"
+gha_service_principal_object_id = "00000000-0000-0000-0000-000000000000"
 
-terraform import azurerm_cognitive_deployment.foundry_model \
-  "$FOUNDRY_RESOURCE_ID/deployments/$FOUNDRY_DEPLOYMENT_NAME"
+foundry_name                  = "your-foundry-account"
+foundry_resource_group_name   = "your-existing-foundry-resource-group"
+foundry_location              = "westus"
+foundry_custom_subdomain_name = "your-foundry-account"
+
+foundry_deployment_name         = "gpt-5.4-mini"
+foundry_model_name              = "gpt-5.4-mini"
+foundry_model_version           = "2025-04-14"
+foundry_deployment_sku_name     = "GlobalStandard"
+foundry_deployment_capacity    = 1
 ```
 
-Populate the `foundry_*` variables with the existing account and deployment
-settings, then run `terraform plan` and resolve any differences before
-applying. Do not apply until the imported resources show no unexpected
-replacement or deletion.
+The Foundry model name, version, SKU, and capacity must be valid for the
+selected Azure region and subscription. Confirm current model availability in
+Azure before applying.
 
-Terraform creates a dedicated user-assigned identity for the API, enables AKS
-Workload Identity, federates that identity to the `raas/app-backend` service
-account, and grants it `Cognitive Services OpenAI User` on the Foundry account.
-Set the GitHub repository variable `AZURE_APP_CLIENT_ID` to the Terraform
-`app_identity_client_id` output. The app must be deployed after this identity
-configuration is applied.
+## Remote Terraform state
+
+The Terraform configuration uses an Azure Blob Storage backend. The backend
+block is intentionally empty in [`provider.tf`](./provider.tf); its values are
+supplied during `terraform init` so state storage details do not need to be
+committed to the repository.
+
+Create the state resource group, storage account, and blob container with
+[`tf-create-backend.sh`](./tf-create-backend.sh). Before running it, set these
+values at the top of the script:
+
+- `STATE_RG`: resource group for Terraform state
+- `STATE_LOCATION`: Azure region
+- `STATE_ACCOUNT`: globally unique storage account name
+- `STATE_CONTAINER`: blob container name
+- `STATE_KEY`: state blob name, such as `raas.tfstate`
+- `GHA_OBJECT_ID`: Microsoft Entra object ID of the GitHub Actions service
+  principal
+
+Run the script from the Terraform directory after authenticating with Azure:
+
+```sh
+az login
+cd terraform
+bash tf-create-backend.sh
+```
+
+The script grants the GitHub Actions principal `Storage Blob Data Contributor`
+on the storage account. If a local `terraform.tfstate` exists, it also runs
+`terraform init -migrate-state` to move that state into the new backend.
+Review the migration prompt and verify the remote state before deleting any
+local state files.
+
+For CI, configure these GitHub repository variables:
+
+- `TF_STATE_RESOURCE_GROUP`
+- `TF_STATE_STORAGE_ACCOUNT`
+- `TF_STATE_CONTAINER`
+- `TF_STATE_KEY`
+
+The Terraform workflow initializes the backend with Azure AD authentication
+(`use_azuread_auth=true`) before planning or applying. The workflow's
+`AZURE_CREDENTIALS` identity must have access to the state container as well as
+the infrastructure resources.
+
+## Create the infrastructure
+
+Log in to Azure and select the target subscription:
+
+```sh
+az login
+az account set --subscription "<subscription-id>"
+```
+
+Initialize Terraform and review the plan:
+
+```sh
+terraform init
+terraform plan
+```
+
+Apply only after reviewing the plan:
+
+```sh
+terraform apply
+```
+
+Terraform creates the Foundry account and model deployment; no
+`terraform import` step is required for a new environment.
+
+If using the GitHub Actions workflow, configure the remote Azure Storage
+backend variables and `AZURE_CREDENTIALS` secret, then run the workflow with
+`apply` enabled after reviewing the generated plan.
+
+## Outputs and application deployment
+
+After applying, retrieve the backend identity client ID:
+
+```sh
+terraform output app_identity_client_id
+```
+
+Set that value as the GitHub repository variable `AZURE_APP_CLIENT_ID`. Also
+configure the Helm workflow variables and secrets described in
+[`../helm/raas/README.md`](../helm/raas/README.md), including
+`AZURE_OPENAI_ENDPOINT`.
+
+The application must be deployed after Terraform has created the cluster,
+namespace permissions, Foundry account, model deployment, and Workload
+Identity configuration. The backend then authenticates to Foundry using its
+federated user-assigned identity rather than a stored API key.

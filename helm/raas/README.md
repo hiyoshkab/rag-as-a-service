@@ -1,6 +1,6 @@
 # RAAS Helm chart
 
-This chart installs the RAAS frontend, API, and Qdrant StatefulSet into the
+This chart installs the RaaS frontend, backend, and Qdrant StatefulSet into the
 `raas` namespace. The app pipeline runs frontend and backend tests, builds and pushes
 both images tagged with the commit SHA, then calls the reusable Helm workflow
 to deploy them together. Changes under `helm/` trigger the same reusable
@@ -28,28 +28,4 @@ It expects these GitHub Actions secrets:
   `azure/login`. The service principal must be able to retrieve credentials for
   the AKS cluster and deploy resources to the `raas` namespace.
 
-The current workflow uses a stored Azure credential rather than GitHub OIDC.
-OIDC with a federated identity is preferable when configured, because it avoids
-keeping a long-lived Azure client secret in GitHub. The AKS Terraform
-configuration disables local accounts, so the Azure identity also needs the
-Azure Kubernetes Service Cluster User role and suitable Kubernetes/Azure RBAC
-permissions. The deploy workflow installs `kubelogin` and configures the AKS
-context to use it for Entra authentication. The app uses a separate
-user-assigned identity federated to its Kubernetes service account; it does not
-inherit the node identity's Azure permissions.
-
-Render the chart locally with:
-
-```sh
-helm template raas ./helm/raas \
-  --namespace raas \
-  --set-string backendImage.repository=docker.io/YOUR_DOCKERHUB_USERNAME/raas-backend \
-  --set-string backendImage.tag=sha-YOUR_COMMIT_SHA \
-  --set-string frontendImage.repository=docker.io/YOUR_DOCKERHUB_USERNAME/raas-frontend \
-  --set-string frontendImage.tag=sha-YOUR_COMMIT_SHA \
-  --set-string azureWorkloadIdentity.clientId=YOUR_APP_IDENTITY_CLIENT_ID
-```
-
-For private Docker Hub images, configure an image-pull secret in the `raas`
-namespace and set `backendImage.pullSecrets` and/or `frontendImage.pullSecrets`
-to its name in the chart values.
+The AKS Terraform configuration disables local accounts, so the Azure identity also needs the Azure Kubernetes Service Cluster User role and suitable Kubernetes/Azure RBAC permissions. The deploy workflow installs `kubelogin` and configures the AKS context to use it for Entra authentication. The app uses a separate user-assigned identity federated to its Kubernetes service account; it does not inherit the node identity's Azure permissions.
