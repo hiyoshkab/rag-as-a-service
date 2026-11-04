@@ -38,7 +38,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   monitor_metrics {
-    annotations_allowed = "prometheus.io/scrape,prometheus.io/path,prometheus.io/port"
+    annotations_allowed = null
     labels_allowed = null
   }
 
