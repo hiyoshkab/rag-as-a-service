@@ -44,7 +44,7 @@ resource "azurerm_dashboard_grafana" "aks_grafana" {
   name                = "${random_pet.azurerm_kubernetes_cluster_name.id}-grafana"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  grafana_major_version = "10"
+  grafana_major_version = "13"
 
   identity {
     type = "SystemAssigned"
