@@ -7,3 +7,4 @@ qdrant-client
 fastembed
 openai
 azure-identity
+prometheus-fastapi-instrumentator

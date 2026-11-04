@@ -8,6 +8,8 @@ from app_backend import config, embedder, store, llm
 from app_backend.chunker import chunk_text
 from app_backend.schemas import IngestResponse, QueryRequest, QueryResponse, Source
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
 log = logging.getLogger(__name__)
 
 
@@ -23,6 +25,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="RaaS", lifespan=lifespan)
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 def get_generate():
     return llm.generate
