@@ -14,6 +14,9 @@ spec:
     metadata:
       annotations:
         helm.sh/revision: {{ .Release.Revision | quote }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
       labels:
         app: app-backend
         app.kubernetes.io/name: raas
