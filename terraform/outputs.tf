@@ -17,3 +17,11 @@ output "app_identity_client_id" {
 output "log_analytics_workspace_id" {
   value = azurerm_log_analytics_workspace.aks_laws.id
 }
+
+output "monitor_workspace_id" {
+  value = azurerm_monitor_workspace.aks_monitor.id
+}
+
+output "grafana_endpoint" {
+  value = azurerm_dashboard_grafana.aks_grafana.endpoint
+}

@@ -6,3 +6,47 @@ resource "azurerm_log_analytics_workspace" "aks_laws" {
   retention_in_days   = 30
 }
 
+resource "azurerm_monitor_workspace" "aks_monitor" {
+  name                = "${random_pet.azurerm_kubernetes_cluster_name.id}-monitor"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_monitor_data_collection_rule" "aks_prometheus" {
+  name                = "${random_pet.azurerm_kubernetes_cluster_name.id}-prom"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  destinations {
+    azure_monitor_metrics {
+      name = "azure-monitor-metrics"
+    }
+  }
+
+  data_sources {
+    prometheus_forwarder {
+      name    = "aks-prometheus"
+      streams = ["Microsoft-PrometheusMetrics"]
+    }
+  }
+
+  data_flow {
+    streams      = ["Microsoft-PrometheusMetrics"]
+    destinations  = ["azure-monitor-metrics"]
+  }
+}
+
+resource "azurerm_dashboard_grafana" "aks_grafana" {
+  name                = "${random_pet.azurerm_kubernetes_cluster_name.id}-grafana"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  grafana_major_version = "10"
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  azure_monitor_workspace_integrations {
+    resource_id = azurerm_monitor_workspace.aks_monitor.id
+  }
+}
