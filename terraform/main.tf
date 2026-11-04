@@ -33,6 +33,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
   dns_prefix          = random_pet.azurerm_kubernetes_cluster_dns_prefix.id
   sku_tier            = var.aks_sku_tier
 
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_laws.id
+  }
+
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.aks_control_plane.id]
