@@ -21,18 +21,22 @@ resource "azurerm_monitor_data_collection_rule" "aks_prometheus" {
     azure_monitor_metrics {
       name = "azure-monitor-metrics"
     }
+    monitor_account {
+      name = "prometheus-destination"
+      monitor_account_id = azurerm_monitor_workspace.aks_monitor.id
+    }
   }
 
   data_sources {
     prometheus_forwarder {
-      name    = "aks-prometheus"
+      name    = "prometheus-forwarder"
       streams = ["Microsoft-PrometheusMetrics"]
     }
   }
 
   data_flow {
     streams      = ["Microsoft-PrometheusMetrics"]
-    destinations  = ["azure-monitor-metrics"]
+    destinations  = ["azure-monitor-metrics", "prometheus-destination"]
   }
 }
 
