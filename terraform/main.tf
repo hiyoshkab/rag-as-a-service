@@ -34,7 +34,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   sku_tier            = var.aks_sku_tier
 
   oms_agent {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_laws.id
+    log_analytics_workspace_id      = azurerm_log_analytics_workspace.aks_laws.id
+    msi_auth_for_monitoring_enabled = true
   }
 
   identity {
