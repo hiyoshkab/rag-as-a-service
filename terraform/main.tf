@@ -37,11 +37,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_laws.id
   }
 
-  monitor_metrics {
-    annotations_allowed = null
-    labels_allowed = null
-  }
-
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.aks_control_plane.id]
