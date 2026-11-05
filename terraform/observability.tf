@@ -104,6 +104,13 @@ resource "azurerm_monitor_data_collection_rule" "aks_prometheus" {
   }
 }
 
+resource "azurerm_monitor_data_collection_rule_association" "aks_prometheus" {
+  name                    = "prometheus-forwarder"
+  target_resource_id      = azurerm_kubernetes_cluster.aks.id
+  data_collection_rule_id = azurerm_monitor_data_collection_rule.aks_prometheus.id
+  description             = "Associates the managed Prometheus DCR with AKS."
+}
+
 resource "azurerm_dashboard_grafana" "aks_grafana" {
   name                  = "${random_pet.azurerm_kubernetes_cluster_name.id}-gr"
   location              = azurerm_resource_group.rg.location
