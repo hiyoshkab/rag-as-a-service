@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-prometheus-config
+  namespace: kube-system
+data:
+  prometheus-config: |
+    global:
+      scrape_interval: {{ .Values.prometheus.scrapeInterval | quote }}
+
+    scrape_configs:
+      - job_name: raas-backend
+        metrics_path: {{ .Values.prometheus.target.metricsPath | quote }}
+        kubernetes_sd_configs:
+          - role: endpoints
+
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: {{ .Values.prometheus.target.namespace | quote }}
+
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: {{ .Values.prometheus.target.serviceName | quote }}
+
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: {{ .Values.prometheus.target.servicePort | quote }}

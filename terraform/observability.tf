@@ -125,3 +125,21 @@ resource "azurerm_dashboard_grafana" "aks_grafana" {
     resource_id = azurerm_monitor_workspace.aks_monitor.id
   }
 }
+
+# Configure Custom Prometheus scrape with ConfigMap deployed as helm chart  
+resource "helm_release" "azure_monitor_config" {
+  name             = "azure-monitor-config"
+  namespace        = "kube-system"
+  create_namespace = false
+
+  chart = "${path.module}/../helm/azure-monitor"
+
+  values = [
+    file("${path.module}/../helm/azure-monitor/values.yaml")
+  ]
+
+  depends_on = [
+    azurerm_kubernetes_cluster.aks,
+    azurerm_monitor_data_collection_rule_association.aks_prometheus
+  ]
+}

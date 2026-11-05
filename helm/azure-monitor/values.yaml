@@ -1,0 +1,8 @@
+prometheus:
+  scrapeInterval: 30s
+
+  target:
+    namespace: raas
+    serviceName: app-backend-service
+    servicePort: http
+    metricsPath: /metrics
