@@ -104,7 +104,9 @@ jobs:
   apply:
     name: Terraform Apply
     needs: plan
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply }}
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' && inputs.apply
     runs-on: ubuntu-latest
     environment: production
     defaults:
