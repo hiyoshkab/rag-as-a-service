@@ -199,6 +199,21 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.citation-link {
+  padding: 0 3px;
+  border: 0;
+  border-radius: 4px;
+  color: #245db0;
+  background: #eaf1ff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.citation-link:hover,
+.citation-link:focus-visible {
+  background: #d7e5ff;
+}
+
 .sources {
   display: grid;
   gap: 16px;

@@ -1,11 +1,19 @@
 import { useState, type SubmitEvent } from "react";
 
+type Source = {
+  filename: string;
+  chunk_index: number;
+  score: number;
+  text: string;
+};
+
 function App() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState("");
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [sources, setSources] = useState<Source[]>([]);
 
   async function handleUpload(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +72,40 @@ function App() {
 
     const data = await response.json();
     setAnswer(data.answer);
+    setSources(data.sources);
     console.log(data);
+  }
+
+  function renderAnswer() {
+    const parts = answer.split(/(\[\d+\])/g);
+
+    return parts.map((part, index) => {
+      const citation = part.match(/^\[(\d+)\]$/);
+      if (!citation) {
+        return <span key={index}>{part}</span>;
+      }
+
+      const sourceNumber = Number(citation[1]);
+      if (sourceNumber < 1 || sourceNumber > sources.length) {
+        return <span key={index}>{part}</span>;
+      }
+
+      return (
+        <button
+          className="citation-link"
+          key={index}
+          type="button"
+          onClick={() =>
+            document
+              .getElementById(`source-${sourceNumber}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+          }
+          aria-label={`View source ${sourceNumber}`}
+        >
+          {part}
+        </button>
+      );
+    });
   }
   
   return (
@@ -129,8 +170,23 @@ function App() {
       <section className="card result" aria-labelledby="answer-heading">
         <h2 id="answer-heading">Answer</h2>
         <p className="answer-text">
-          {answer || "Ask a question to get started"}
+          {answer ? renderAnswer() : "Ask a question to get started"}
         </p>
+        {sources.length > 0 && (
+          <>
+            <h3 id="sources-heading">Sources</h3>
+            <ol className="sources" aria-labelledby="sources-heading">
+              {sources.map((source, index) => (
+                <li id={`source-${index + 1}`} key={`${source.filename}-${source.chunk_index}`}>
+                  <p className="source-meta">
+                    {source.filename}, chunk {source.chunk_index}
+                  </p>
+                  <blockquote>{source.text}</blockquote>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </section>
       <footer>RaaS · Document Q&amp;A</footer>
     </main>
