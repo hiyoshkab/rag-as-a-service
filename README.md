@@ -1,9 +1,10 @@
-# RaaS
+# RAG on AKS
+This is a retrieval-augmented question-answering application (RAG) for plain-text documents built on AKS. Upload a UTF-8 `.txt` or `.md` file, store its embeddings in Qdrant, and ask questions answered with Azure AI Foundry. The React frontend displays the generated answer and the source passages used to produce it.
 
-RaaS (RAG as a Service) is a retrieval-augmented question-answering application for plain-text documents. Upload a UTF-8 `.txt` or `.md` file, store its embeddings in Qdrant, and ask questions answered with Azure AI Foundry. The React frontend displays the generated answer and the source passages used to produce it.
+It keeps everything contained within a VNET to prevent external access and maintain privacy of the internal content.
 
 ## Architecture
-![RaaS architecture](./architecture.png)
+![RAG architecture](./architecture.png)
 
 The backend chunks uploaded text, creates 384-dimensional embeddings with `BAAI/bge-small-en-v1.5`, and stores them in the `documents` Qdrant collection. Queries retrieve the most relevant chunks and pass them to the configured Azure
 OpenAI deployment to generate an answer.
