@@ -76,38 +76,6 @@ function App() {
     console.log(data);
   }
 
-  function renderAnswer() {
-    const parts = answer.split(/(\[\d+\])/g);
-
-    return parts.map((part, index) => {
-      const citation = part.match(/^\[(\d+)\]$/);
-      if (!citation) {
-        return <span key={index}>{part}</span>;
-      }
-
-      const sourceNumber = Number(citation[1]);
-      if (sourceNumber < 1 || sourceNumber > sources.length) {
-        return <span key={index}>{part}</span>;
-      }
-
-      return (
-        <button
-          className="citation-link"
-          key={index}
-          type="button"
-          onClick={() =>
-            document
-              .getElementById(`source-${sourceNumber}`)
-              ?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-          }
-          aria-label={`View source ${sourceNumber}`}
-        >
-          {part}
-        </button>
-      );
-    });
-  }
-  
   return (
     <main className="page">
       <header className="header">
@@ -170,7 +138,7 @@ function App() {
       <section className="card result" aria-labelledby="answer-heading">
         <h2 id="answer-heading">Answer</h2>
         <p className="answer-text">
-          {answer ? renderAnswer() : "Ask a question to get started"}
+          {answer || "Ask a question to get started"}
         </p>
         {sources.length > 0 && (
           <>
@@ -180,7 +148,7 @@ function App() {
                 <li id={`source-${index + 1}`} key={`${source.filename}-${source.chunk_index}`}>
                   <details>
                     <summary className="source-meta">
-                      {source.filename}, chunk {source.chunk_index}
+                      [{index + 1}] {source.filename}, chunk {source.chunk_index}
                     </summary>
                     <blockquote>{source.text}</blockquote>
                   </details>
