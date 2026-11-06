@@ -72,7 +72,7 @@ function App() {
 
     const data = await response.json();
     setAnswer(data.answer);
-    setSources(data.sources);
+    setSources(data.citations);
     console.log(data);
   }
 
