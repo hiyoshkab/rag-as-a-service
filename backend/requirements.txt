@@ -8,3 +8,6 @@ openai==3.46.0
 azure-identity==1.27.0
 prometheus-fastapi-instrumentator==8.1.0
 pytest==9.2.0
+msgpack==1.2.3
+setuptools==78.1.1
+urllib3==2.8.0

@@ -44,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: backend/Dockerfile
+          file: frontend/Dockerfile
           load: true
           push: false
           tags: ${{ env.IMAGE }}
