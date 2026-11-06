@@ -105,6 +105,29 @@ jobs:
           push: false
           tags: ${{ env.IMAGE }}
 
+      - name: DEBUG inspect image (temporary)
+        run: |
+          docker image inspect "$IMAGE" --format 'id={{.Id}} created={{.Created}}'
+          docker run --rm --entrypoint sh "$IMAGE" -c '
+            echo "== setuptools-named paths"
+            find / -iname "setuptools*" -not -path "/proc/*" 2>/dev/null
+            echo "== pip list"
+            python -m pip list 2>&1 | head -80'
+
+      - name: DEBUG Trivy JSON (temporary)
+        uses: aquasecurity/trivy-action@<same full commit SHA as below>
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy.json
+          exit-code: "0"
+
+      - name: DEBUG show where findings live (temporary)
+        run: |
+          jq -r '.Results[].Vulnerabilities[]? | [.PkgName,.InstalledVersion,(.PkgPath // "none")] | @tsv' trivy.json
+
       - name: Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
