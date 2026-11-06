@@ -1,6 +1,11 @@
+resource "azurerm_resource_group" "foundry_rg" {
+  name     = var.foundry_resource_group_name
+  location = var.foundry_location
+}
+
 resource "azurerm_cognitive_account" "foundry" {
   name                          = var.foundry_name
-  resource_group_name           = var.foundry_resource_group_name
+  resource_group_name           = azurerm_resource_group.foundry_rg.name
   location                      = var.foundry_location
   kind                          = var.foundry_kind
   sku_name                      = var.foundry_sku_name
@@ -42,7 +47,7 @@ resource "azurerm_role_assignment" "app_foundry_user" {
 
 resource "azurerm_private_endpoint" "foundry_private_endpoint" {
   name                = "foundry-pe"
-  resource_group_name = var.foundry_resource_group_name
+  resource_group_name = azurerm_resource_group.foundry_rg.name
   location            = azurerm_virtual_network.aks_vnet.location
   subnet_id           = azurerm_subnet.foundry_subnet.id
 
@@ -61,7 +66,7 @@ resource "azurerm_private_endpoint" "foundry_private_endpoint" {
 
 resource "azurerm_private_dns_zone" "foundry_private_dns_zone" {
   name                = "privatelink.services.ai.azure.com"
-  resource_group_name = var.foundry_resource_group_name
+  resource_group_name = azurerm_resource_group.foundry_rg.name
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "foundry_private_dns_zone_link" {
