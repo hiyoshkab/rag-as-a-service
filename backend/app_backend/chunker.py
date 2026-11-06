@@ -8,7 +8,6 @@ def chunk_text(text: str, chunk_size: int, overlap: int = 0):
 
     chunks = []
     words = text.split()
-    print(words)
     for i in range(0, len(words), chunk_size - overlap):
         chunks.append(" ".join(words[i:i + chunk_size]))
 

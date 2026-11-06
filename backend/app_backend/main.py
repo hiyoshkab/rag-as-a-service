@@ -117,7 +117,11 @@ def query(
     ]
 
     if not sources:
-        return QueryResponse(answer="No documents have been ingested yet.", sources=[])
+        return QueryResponse(
+            answer="No documents have been ingested yet.",
+            citations=[],
+            sources=[],
+        )
     
     try:
         answer = generate(body.question, [payload for _, payload in results])
@@ -125,5 +129,8 @@ def query(
     except llm.LLMError as e:
         log.error("LLM call failed: %s", e)
         raise HTTPException(status_code=502, detail=str(e))
+
+    cited_source_numbers = llm.extract_citations(answer, len(sources))
+    citations = [sources[number - 1] for number in cited_source_numbers]
     
-    return QueryResponse(answer=answer, sources=sources)
+    return QueryResponse(answer=answer, citations=citations, sources=sources)

@@ -12,5 +12,5 @@ EMBED_DIM = int(getenv("EMBED_DIM", "384"))
 EMBED_BATCH_SIZE = int(getenv("EMBED_BATCH_SIZE", "64"))
 MAX_UPLOAD_BYTES = int(getenv("MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
 
-CHUNK_SIZE = int(getenv("CHUNK_SIZE", "512"))
-OVERLAP = int(getenv("OVERLAP", "64"))
+CHUNK_SIZE = int(getenv("CHUNK_SIZE", "256"))
+OVERLAP = int(getenv("OVERLAP", "32"))

@@ -12,6 +12,7 @@ class Source(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+    citations: list[Source]
     sources: list[Source]
 
 class IngestResponse(BaseModel):

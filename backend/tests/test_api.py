@@ -67,6 +67,14 @@ def test_ingest_and_query_document(test_client, monkeypatch):
     assert query_response.status_code == 200
     assert query_response.json() == {
         "answer": "The payment is due in 30 days. [1]",
+        "citations": [
+            {
+                "filename": "contract.txt",
+                "chunk_index": 0,
+                "score": 1.0,
+                "text": "payment is due in 30 days",
+            }
+        ],
         "sources": [
             {
                 "filename": "contract.txt",
