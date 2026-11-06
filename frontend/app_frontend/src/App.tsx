@@ -178,10 +178,12 @@ function App() {
             <ol className="sources" aria-labelledby="sources-heading">
               {sources.map((source, index) => (
                 <li id={`source-${index + 1}`} key={`${source.filename}-${source.chunk_index}`}>
-                  <p className="source-meta">
-                    {source.filename}, chunk {source.chunk_index}
-                  </p>
-                  <blockquote>{source.text}</blockquote>
+                  <details>
+                    <summary className="source-meta">
+                      {source.filename}, chunk {source.chunk_index}
+                    </summary>
+                    <blockquote>{source.text}</blockquote>
+                  </details>
                 </li>
               ))}
             </ol>

@@ -224,6 +224,7 @@ button:disabled {
   margin-bottom: 6px;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
+  cursor: pointer;
 }
 
 blockquote {
