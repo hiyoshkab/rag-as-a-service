@@ -115,7 +115,7 @@ jobs:
             python -m pip list 2>&1 | head -80'
 
       - name: DEBUG Trivy JSON (temporary)
-        uses: aquasecurity/trivy-action@<same full commit SHA as below>
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}
           severity: HIGH,CRITICAL
