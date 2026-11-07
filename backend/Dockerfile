@@ -9,8 +9,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt 
 
-RUN find / -type f ( -name '*.cdx.json' -o -name '*.bom.json' -o -name 'bom.json' -o -name '*.spdx.json' -o -name '*.spdx' ) \
-    -delete 2>/dev/null || true
+RUN find / -type f \( -name '*.cdx.json' -o -name '*.bom.json' -o -name 'bom.json' -o -name '*.spdx.json' -o -name '*.spdx' \) -delete 2>/dev/null || true
  
 COPY backend/app_backend/ ./app_backend/
  
